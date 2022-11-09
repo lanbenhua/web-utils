@@ -38,6 +38,8 @@ bower_components
 build/Release
 
 # Dependency directories
+yarn.lock
+package-lock.json
 node_modules/
 jspm_packages/
 

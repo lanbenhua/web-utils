@@ -4,7 +4,9 @@ module.exports = {
     es2021: true,
   },
   extends: [
-    'airbnb-base',
+    // 'airbnb-base',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:prettier/recommended',
     'prettier',
   ],
   parser: '@typescript-eslint/parser',
@@ -21,5 +23,8 @@ module.exports = {
     "import/extensions": "off",
     "consistent-return": "off",
     "no-bitwise": "off",
+    "lines-between-class-members": "off",
+    "no-underscore-dangle": "off",
+    "no-plusplus": "off"
   },
 };
