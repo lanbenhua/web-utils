@@ -4,11 +4,11 @@ export function timeout<T = unknown>(
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(
-      () => reject(new Error('operation timed out')),
+      () => reject(new Error("operation timed out")),
       millis
     );
 
-    promise.then(result => {
+    promise.then((result) => {
       clearTimeout(timeoutId);
       resolve(result);
     });
@@ -16,7 +16,7 @@ export function timeout<T = unknown>(
 }
 
 export function delay<T = unknown>(millis: number): Promise<T> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     setTimeout(resolve, millis);
   });
 }

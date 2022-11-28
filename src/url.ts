@@ -44,8 +44,8 @@ export const params2Search = <T extends RouteQuery = RouteQuery>(
       searchParams.append(key, String(val));
       continue;
     }
-    if (val && typeof (val as String).toString === "function") {
-      searchParams.append(key, (val as String).toString());
+    if (val && typeof (val as string).toString === "function") {
+      searchParams.append(key, (val as string).toString());
       continue;
     }
     continue;
@@ -125,6 +125,72 @@ class URI {
 
   public isHttps(): boolean {
     return !!is_https_iri(this._uri);
+  }
+
+  public extract(regexp: string | RegExp): string[] | null {
+    return URI.extract(this._uri, regexp);
+  }
+
+  public extractLink(): string[] | null {
+    return URI.extractLink(this._uri);
+  }
+
+  public split(regexp: string | RegExp): string[] | null {
+    return URI.split(this._uri, regexp);
+  }
+
+  public splitLink(): string[] {
+    return URI.splitLink(this._uri);
+  }
+
+  public markLink(): { type: "text" | "link"; text: string }[] {
+    return URI.markLink(this._uri);
+  }
+
+  static extract(text: string, regexp: string | RegExp): string[] | null {
+    const r = regexp instanceof RegExp ? regexp : new RegExp(regexp);
+    const matched = text.match(r);
+    if (!matched) return null;
+    return matched.map((item) => item);
+  }
+
+  static extractLink(text: string): string[] | null {
+    // regex = “\\b((?:https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:, .;]*[-a-zA-Z0-9+&@#/%=~_|])”
+    const r = new RegExp(
+      "(?:(?:https?|ftp)://)(?:\\S+(?::\\S*)?@)?(?:(?!(?:10|127)(?:\\.\\d{1,3}){3})(?!(?:169\\.254|192\\.168)(?:\\.\\d{1,3}){2})(?!172\\.(?:1[6-9]|2\\d|3[0-1])(?:\\.\\d{1,3}){2})(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}(?:\\.(?:[1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))|(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*(?:\\.(?:[a-z\\u00a1-\\uffff]{2,}))\\.?)(?::\\d{2,5})?(?:[/?#]\\S*)?",
+      "gi"
+    );
+    return URI.extract(text, r);
+  }
+
+  static split(text: string, regexp: string | RegExp): string[] {
+    const r = regexp instanceof RegExp ? regexp : new RegExp(regexp);
+    return text.split(r);
+  }
+
+  static splitLink(text: string): string[] {
+    const r = new RegExp(
+      "(?:(?:https?|ftp)://)(?:\\S+(?::\\S*)?@)?(?:(?!(?:10|127)(?:\\.\\d{1,3}){3})(?!(?:169\\.254|192\\.168)(?:\\.\\d{1,3}){2})(?!172\\.(?:1[6-9]|2\\d|3[0-1])(?:\\.\\d{1,3}){2})(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}(?:\\.(?:[1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))|(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*(?:\\.(?:[a-z\\u00a1-\\uffff]{2,}))\\.?)(?::\\d{2,5})?(?:[/?#]\\S*)?",
+      "gi"
+    );
+    return URI.split(text, r);
+  }
+
+  static markLink(text: string): { type: "text" | "link"; text: string }[] {
+    const links = URI.extractLink(text);
+    const plaintexts = URI.splitLink(text);
+
+    if (!links) return plaintexts.map((item) => ({ type: "text", text: item }));
+
+    const res: { type: "text" | "link"; text: string }[] = [];
+    while (links.length > 0 || plaintexts.length > 0) {
+      const plaintext = plaintexts.shift();
+      const link = links.shift();
+
+      plaintext && res.push({ type: "text", text: plaintext });
+      link && res.push({ type: "link", text: link });
+    }
+    return res;
   }
 }
 

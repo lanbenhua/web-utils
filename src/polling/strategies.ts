@@ -1,11 +1,11 @@
-import { PollerStrategy } from './type';
+import { PollerStrategy } from "./type";
 
 const strategies: Record<string, PollerStrategy> = {
-  'fixed-interval': {
+  "fixed-interval": {
     defaults: {
       interval: 1000,
     },
-    getNextInterval: function(_, options) {
+    getNextInterval: function (_, options) {
       return (
         options?.interval ??
         (options?.strategy as PollerStrategy).defaults?.interval ??
@@ -14,7 +14,7 @@ const strategies: Record<string, PollerStrategy> = {
     },
   },
 
-  'linear-backoff': {
+  "linear-backoff": {
     defaults: {
       start: 1000,
       increment: 1000,
@@ -28,12 +28,12 @@ const strategies: Record<string, PollerStrategy> = {
     },
   },
 
-  'exponential-backoff': {
+  "exponential-backoff": {
     defaults: {
       min: 1000,
       max: 30000,
     },
-    getNextInterval: function(count, options) {
+    getNextInterval: function (count, options) {
       return Math.min(
         (options?.strategy as PollerStrategy).defaults?.max ?? 30000,
         Math.round(

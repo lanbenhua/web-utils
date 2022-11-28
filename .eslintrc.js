@@ -25,6 +25,7 @@ module.exports = {
     "no-bitwise": "off",
     "lines-between-class-members": "off",
     "no-underscore-dangle": "off",
-    "no-plusplus": "off"
+    "no-plusplus": "off",
+    "@typescript-eslint/ban-ts-comment": "off"
   },
 };

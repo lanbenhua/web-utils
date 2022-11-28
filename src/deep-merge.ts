@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export default function deepMerge(...sources: any[]): any {
+export default function deepMerge<T extends object = object>(
+  ...sources: (T | undefined | null)[]
+): T {
   let acc: Record<string, any> = {};
   for (const source of sources) {
     if (source instanceof Array) {
@@ -17,5 +19,5 @@ export default function deepMerge(...sources: any[]): any {
       }
     }
   }
-  return acc;
+  return acc as T;
 }

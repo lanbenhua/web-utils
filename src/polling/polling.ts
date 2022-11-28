@@ -1,19 +1,18 @@
-import { NODE_ENV } from '_constants/global';
-import strategies from './strategies';
-import { PollerOptions } from './type';
-import { timeout, delay } from './util';
+import strategies from "./strategies";
+import { PollerOptions } from "./type";
+import { timeout, delay } from "./util";
 
 const DEFAULTS: PollerOptions = {
-  strategy: 'fixed-interval',
+  strategy: "fixed-interval",
   retries: 3,
   interval: 1000,
-  shouldContinue: err => {
+  shouldContinue: (err) => {
     return !!err;
   },
 };
 
 let pollerCount = 0;
-export const CANCEL_TOKEN = new Error('Canceled');
+export const CANCEL_TOKEN = new Error("Canceled");
 
 export default function polling<T>(
   poller: () => T | Promise<T>,
@@ -23,14 +22,13 @@ export default function polling<T>(
   options.name = options.name || `Poller-${pollerCount++}`;
 
   const debug = (message: string) =>
-    NODE_ENV === 'development' &&
-    console.log(`(${options?.name ?? ''}): ${message}`);
+    console.log(`(${options?.name ?? ""}): ${message}`);
 
   debug(
     `Creating a promise poller "${options.name}" with interval=${options.interval}, retries=${options.retries}`
   );
 
-  if (typeof options.strategy === 'string' && !strategies[options.strategy]) {
+  if (typeof options.strategy === "string" && !strategies[options.strategy]) {
     throw new Error(
       `Invalid strategy "${
         options.strategy
@@ -39,13 +37,13 @@ export default function polling<T>(
   }
 
   const strategy =
-    typeof options.strategy === 'string'
+    typeof options.strategy === "string"
       ? strategies[options.strategy]
       : options.strategy;
   debug(`Using strategy "${options.strategy}", ${strategy}.`);
   options.strategy = strategy;
 
-  debug('Options:');
+  debug("Options:");
   Object.keys(options).forEach((option: string) => {
     // @ts-ignore
     debug(`    "${option}": ${options[option]}`);
@@ -61,9 +59,9 @@ export default function polling<T>(
       debug(`Using master timeout of ${options.masterTimeout} ms.`);
       // @ts-ignore
       timeoutId = setTimeout(() => {
-        debug('Master timeout reached. Rejecting master promise.');
+        debug("Master timeout reached. Rejecting master promise.");
         polling = false;
-        reject('master timeout');
+        reject("master timeout");
       }, options.masterTimeout);
     }
 
@@ -90,15 +88,15 @@ export default function polling<T>(
       }
 
       pollerPromise.then(
-        result => {
-          debug('Poll succeeded. Resolving master promise.');
+        (result) => {
+          debug("Poll succeeded. Resolving master promise.");
 
-          if (typeof options?.progressCallback === 'function') {
+          if (typeof options?.progressCallback === "function") {
             options.progressCallback(null, result);
           }
 
           if (options?.shouldContinue?.(null, result)) {
-            debug('shouldContinue returned true. Retrying.');
+            debug("shouldContinue returned true. Retrying.");
 
             const nextInterval = _getNextInterval();
 
@@ -111,20 +109,20 @@ export default function polling<T>(
             resolve(result);
           }
         },
-        err => {
+        (err) => {
           if (err === CANCEL_TOKEN) {
-            debug('Task promise rejected with CANCEL_TOKEN, canceling.');
+            debug("Task promise rejected with CANCEL_TOKEN, canceling.");
             reject(rejections);
             polling = false;
           }
 
           rejections.push(err);
-          if (typeof options?.progressCallback === 'function') {
+          if (typeof options?.progressCallback === "function") {
             options.progressCallback(err);
           }
 
           if (!--retriesRemaining || !options?.shouldContinue?.(err)) {
-            debug('Maximum retries reached. Rejecting master promise.');
+            debug("Maximum retries reached. Rejecting master promise.");
             reject(rejections);
           } else if (polling) {
             debug(`Poll failed. ${retriesRemaining} retries remaining.`);

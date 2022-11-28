@@ -47,11 +47,11 @@ export class CookieProvider {
       decodeURIComponent(
         document.cookie.replace(
           new RegExp(
-            '(?:(?:^|.*;)\\s*' +
-              encodeURIComponent(name).replace(/[-.+*]/g, '\\$&') +
-              '\\s*\\=\\s*([^;]*).*$)|^.*$'
+            "(?:(?:^|.*;)\\s*" +
+              encodeURIComponent(name).replace(/[-.+*]/g, "\\$&") +
+              "\\s*\\=\\s*([^;]*).*$)|^.*$"
           ),
-          '$1'
+          "$1"
         )
       ) || null
     );
@@ -63,31 +63,31 @@ export class CookieProvider {
     if (!name || /^(?:expires|max\-age|path|domain|secure)$/i.test(name)) {
       return false;
     }
-    let sExpires = '';
+    let sExpires = "";
     if (expires) {
       switch (expires.constructor) {
         case Number:
           sExpires =
             expires === Infinity
-              ? '; expires=Fri, 31 Dec 9999 23:59:59 GMT'
-              : '; max-age=' + expires;
+              ? "; expires=Fri, 31 Dec 9999 23:59:59 GMT"
+              : "; max-age=" + expires;
           break;
         case String:
-          sExpires = '; expires=' + expires;
+          sExpires = "; expires=" + expires;
           break;
         case Date:
-          sExpires = '; expires=' + (expires as Date).toUTCString();
+          sExpires = "; expires=" + (expires as Date).toUTCString();
           break;
       }
     }
     document.cookie =
       encodeURIComponent(name) +
-      '=' +
-      encodeURIComponent(value || '') +
+      "=" +
+      encodeURIComponent(value || "") +
       sExpires +
-      (domain ? '; domain=' + domain : '') +
-      (path ? '; path=' + path : '') +
-      (secure ? '; secure' : '');
+      (domain ? "; domain=" + domain : "") +
+      (path ? "; path=" + path : "") +
+      (secure ? "; secure" : "");
     return true;
   }
 
@@ -98,9 +98,9 @@ export class CookieProvider {
     }
     document.cookie =
       encodeURIComponent(name) +
-      '=; expires=Thu, 01 Jan 1970 00:00:00 GMT' +
-      (domain ? '; domain=' + domain : '') +
-      (path ? '; path=' + path : '');
+      "=; expires=Thu, 01 Jan 1970 00:00:00 GMT" +
+      (domain ? "; domain=" + domain : "") +
+      (path ? "; path=" + path : "");
     return true;
   }
 
@@ -113,16 +113,16 @@ export class CookieProvider {
 
   public hasItem(name: string): boolean {
     return new RegExp(
-      '(?:^|;\\s*)' +
-        encodeURIComponent(name).replace(/[-.+*]/g, '\\$&') +
-        '\\s*\\='
+      "(?:^|;\\s*)" +
+        encodeURIComponent(name).replace(/[-.+*]/g, "\\$&") +
+        "\\s*\\="
     ).test(document.cookie);
   }
 
   /* optional method: you can safely remove it! */
   names(): string[] {
     const names = document.cookie
-      .replace(/((?:^|\s*;)[^\=]+)(?=;|$)|^\s*|\s*(?:\=[^;]*)?(?:\1|$)/g, '')
+      .replace(/((?:^|\s*;)[^\=]+)(?=;|$)|^\s*|\s*(?:\=[^;]*)?(?:\1|$)/g, "")
       .split(/\s*(?:\=[^;]*)?;\s*/);
     for (let nIdx = 0; nIdx < names.length; nIdx++) {
       names[nIdx] = decodeURIComponent(names[nIdx]);
