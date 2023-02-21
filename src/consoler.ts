@@ -2,17 +2,28 @@
 import { isNil } from "./nil";
 import deepMerge from "./deep-merge";
 
-export type PrefixType = "error" | "info" | "log" | "warn";
-
-type KeyMapRecord<T, S> = Partial<{
-  [p in keyof T]: S;
-}>;
-
-type ConsolerOptions = {
+export type ConsolerPrefixType = "error" | "info" | "log" | "warn";
+export type ConsolerPrefix =
+  | string
+  | null
+  | ((type: ConsolerPrefixType) => string | null | undefined);
+export type ConsolerMethod = keyof Console; // | keyof Omit<Consoler, 'options' | 'getPrefix' | 'isPrefixable' | 'isExecutable'>;
+export type ConsolerExecableMap = Partial<{ [p in ConsolerMethod]: boolean }>;
+export type ConsolerPrefixMap = Partial<
+  Record<ConsolerPrefixType, boolean | { enable?: boolean; style?: string }>
+>;
+export type ConsolerOptions = {
   execable?: boolean;
-  execableMap?: KeyMapRecord<Consoler, boolean>;
-  prefix?: string | null | ((type: PrefixType) => string | null | undefined);
-  prefixMap?: Partial<Record<PrefixType, boolean>>;
+  execableMap?: ConsolerExecableMap;
+  prefix?: ConsolerPrefix;
+  prefixMap?: ConsolerPrefixMap;
+};
+
+const defaultColorSets: Record<ConsolerPrefixType, string> = {
+  error: "color: #fff; font-style: normal; background-color: red; padding: 2px",
+  log: "color: #fff; font-style: normal; background-color: grey; padding: 2px",
+  warn: "color: #333; font-style: normal; background-color: yellow; padding: 2px",
+  info: "color: #fff; font-style: normal; background-color: green; padding: 2px",
 };
 
 const defaultOptions: ConsolerOptions = {
@@ -41,12 +52,32 @@ const defaultOptions: ConsolerOptions = {
     profile: true,
     profileEnd: true,
   },
-  prefix: null,
+  prefix: (type: ConsolerPrefixType) => {
+    const map: Record<ConsolerPrefixType, string> = {
+      error: "[ERROR]",
+      info: "[INFO]",
+      log: "[DEBUG]",
+      warn: "[WARN]",
+    };
+    return map[type];
+  },
   prefixMap: {
-    error: true,
-    info: true,
-    log: true,
-    warn: true,
+    error: {
+      enable: true,
+      style: defaultColorSets.error,
+    },
+    info: {
+      enable: true,
+      style: defaultColorSets.info,
+    },
+    log: {
+      enable: true,
+      style: defaultColorSets.log,
+    },
+    warn: {
+      enable: true,
+      style: defaultColorSets.warn,
+    },
   },
 };
 
@@ -62,19 +93,18 @@ function execable() {
         `execable decorator must use for a method, but ${proporty.toString()} is ${typeof original}`
       );
     descriptor.value = function () {
-      // @ts-ignore
+      //@ts-ignore
       // eslint-disable-next-line prefer-rest-params
       const args: any[] = [...arguments];
       if (!(this instanceof Consoler)) return original.apply(this, args);
       const self = this as Consoler;
-      // @ts-ignore
-      const enable = self.isExecutable(proporty.toString() as keyof Consoler);
+      const enable = self.isExecutable(proporty.toString() as ConsolerMethod);
       if (enable) return original.apply(this, args);
     };
   };
 }
 
-function prefixable() {
+function prefixable(c?: string) {
   return function (
     _: Consoler,
     proporty: string | symbol,
@@ -86,30 +116,43 @@ function prefixable() {
         `prefixable decorator must use for a method, but ${proporty.toString()} is ${typeof original}`
       );
     descriptor.value = function () {
-      // @ts-ignore
+      //@ts-ignore
       // eslint-disable-next-line prefer-rest-params
       const args: any[] = [...arguments];
       if (!(this instanceof Consoler)) return original.apply(this, args);
       const self = this as Consoler;
-      // @ts-ignore
-      const prefix = self.getPrefix(proporty.toString());
+      const { enable, prefix, style } = self.getPrefix(
+        proporty.toString() as ConsolerPrefixType
+      );
       const first = args.shift();
-      if (isNil(prefix)) return original.call(this, first, ...args);
+      if (!enable || isNil(prefix)) return original.call(this, first, ...args);
+
       if (typeof first === "string")
-        return original.call(this, prefix + " " + first, ...args);
-      return original.call(this, "%s %o", prefix, first, ...args);
+        return original.call(
+          this,
+          "%c" + prefix + "%c " + first,
+          style ?? c,
+          "color: inherit; font-style: normal",
+          ...args
+        );
+      return original.call(
+        this,
+        "%c%s%c %o",
+        style ?? c,
+        prefix,
+        "color: inherit; font-style: normal",
+        first,
+        ...args
+      );
     };
   };
 }
 
 class Consoler {
-  private _options?: ConsolerOptions;
-  public get options() {
-    return this._options;
-  }
+  public options?: ConsolerOptions;
 
   constructor(options?: ConsolerOptions) {
-    this._options =
+    this.options =
       deepMerge<ConsolerOptions>(defaultOptions, options) ?? undefined;
 
     this.getPrefix = this.getPrefix.bind(this);
@@ -139,17 +182,32 @@ class Consoler {
     this.warn = this.warn.bind(this);
   }
 
-  private getPrefix(type: PrefixType): string | null | undefined {
-    if (this._options?.prefix) {
-      return typeof this._options?.prefix === "string"
-        ? this._options?.prefix
-        : this._options?.prefix(type);
-    }
-    return undefined;
+  public getPrefix(type: ConsolerPrefixType): {
+    enable: boolean;
+    prefix?: string | null;
+    style?: string;
+  } {
+    const prefix =
+      typeof this.options?.prefix === "string"
+        ? this.options?.prefix
+        : this.options?.prefix?.(type);
+    const option = this.options?.prefixMap?.[type];
+    return {
+      enable: this.isPrefixable(type),
+      style: typeof option === "boolean" ? undefined : option?.style,
+      prefix,
+    };
   }
 
-  private isExecutable(type: keyof Consoler): boolean {
-    return !!(this._options?.execable && this._options?.execableMap?.[type]);
+  public isPrefixable(type: ConsolerPrefixType): boolean {
+    const option = this.options?.prefixMap?.[type];
+    if (isNil(option)) return false;
+    if (typeof option === "boolean") return option;
+    return option.enable !== false;
+  }
+
+  public isExecutable(type: ConsolerMethod): boolean {
+    return !!(this.options?.execable && this.options?.execableMap?.[type]);
   }
 
   @execable()
@@ -188,7 +246,7 @@ class Consoler {
   }
 
   @execable()
-  @prefixable()
+  @prefixable(defaultColorSets.error)
   public error(...data: any[]) {
     return console.error(...data);
   }
@@ -209,13 +267,13 @@ class Consoler {
   }
 
   @execable()
-  @prefixable()
+  @prefixable(defaultColorSets.info)
   public info(...data: any[]) {
     return console.info(...data);
   }
 
   @execable()
-  @prefixable()
+  @prefixable(defaultColorSets.log)
   public log(...data: any[]) {
     return console.log(...data);
   }
@@ -250,7 +308,7 @@ class Consoler {
     console.trace(...data);
   }
   @execable()
-  @prefixable()
+  @prefixable(defaultColorSets.warn)
   public warn(...data: any[]) {
     return console.warn(...data);
   }
